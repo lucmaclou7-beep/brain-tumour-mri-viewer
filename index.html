@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore brain tumour MRI segmentation and boundary recovery on 51 held-out cases. Educational research prototype.">
+  <title>MRI Segmentation Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="dataset.js"></script>
+  <script defer src="surface.js"></script>
+  <script defer src="viewer.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap brand">
+      <svg class="mark" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#126c72"/><path d="M9 15 18 10l9 5-9 5-9-5Zm0 4 9 5 9-5m-18 4 9 5 9-5" fill="none" stroke="#e4f9fa" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.55"/></svg>
+      <span>MRI Segmentation Lab</span>
+      <span class="local"><span></span> Research viewer</span>
+    </div>
+  </header>
+  <main class="wrap">
+    <p class="notice">Educational research prototype — not clinically validated or for diagnosis. <a href="final-report.pdf">Read the final report (PDF)</a>.</p>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">RETRAINED MODELS · HELD-OUT EVALUATION</p>
+        <h1>Compare tumour masks</h1>
+        <p class="subtitle">Explore the reference annotation and the model’s prediction on the same MRI grid.</p>
+      </div>
+      <div class="selectors">
+        <label for="case-select">Held-out case<select id="case-select"></select></label>
+        <label for="sequence">MRI sequence<select id="sequence"></select></label>
+      </div>
+    </section>
+    <div id="notice" class="notice" role="status" aria-live="polite">Loading the first held-out case…</div>
+    <section class="recovery-bar" aria-label="Boundary recovery comparison">
+      <label class="recovery-switch"><input type="checkbox" id="recovery-toggle" disabled> Boundary recovery <span class="experimental">Experimental</span></label>
+      <span><i class="swatch added"></i> Mint marks added oedema in prediction views.</span>
+      <button type="button" id="focus-additions" disabled>Jump to added oedema</button>
+      <p id="recovery-summary" role="status">Loading recovery comparison…</p>
+    </section>
+    <section class="metrics" aria-label="Case Dice scores" id="metrics"></section>
+
+    <section class="panel" aria-labelledby="surface-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="surface-title">3D comparison</h2>
+          <p>Drag either view to rotate both. Scroll or use the zoom controls.</p>
+        </div>
+        <div class="buttons" aria-label="3D view controls">
+          <button type="button" id="zoom-out" class="icon-btn" aria-label="Zoom out">−</button>
+          <button type="button" id="zoom-in" class="icon-btn" aria-label="Zoom in">+</button>
+          <button type="button" id="reset-view">Reset view</button>
+        </div>
+      </div>
+      <div class="surfaces">
+        <div class="surface" id="reference-view">
+          <div class="surface-heading"><strong>Reference annotation</strong><span>Dataset mask</span></div>
+          <canvas id="reference-3d" tabindex="0" aria-label="Reference annotation surface, use arrow keys to rotate and plus or minus to zoom"></canvas>
+          <p class="surface-error" hidden>3D rendering is unavailable in this browser. The MRI slices below are available.</p>
+        </div>
+        <div class="surface" id="prediction-view">
+          <div class="surface-heading"><strong id="prediction-title">Retrained baseline</strong><span id="prediction-subtitle">Saved checkpoint</span></div>
+          <canvas id="prediction-3d" tabindex="0" aria-label="Predicted surface, use arrow keys to rotate and plus or minus to zoom"></canvas>
+          <p class="surface-error" hidden>3D rendering is unavailable in this browser. The MRI slices below are available.</p>
+        </div>
+      </div>
+      <div class="panel-foot">
+        <div class="class-toggles" role="group" aria-label="Visible segmentation labels">
+          <label><input type="checkbox" data-class="1" checked><i class="swatch c1"></i>Oedema</label>
+          <label><input type="checkbox" data-class="2" checked><i class="swatch c2"></i>Non-enhancing tumour</label>
+          <label><input type="checkbox" data-class="3" checked><i class="swatch c3"></i>Enhancing tumour</label>
+        </div>
+        <button type="button" id="framing" aria-pressed="false" title="Include distant predicted regions">Fit all</button>
+      </div>
+    </section>
+
+    <section class="panel slices-panel" aria-labelledby="slice-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="slice-title">Linked MRI slices</h2>
+          <p>Click an image or move a slider to update the shared crosshair.</p>
+        </div>
+        <button type="button" id="focus">Center on annotation</button>
+      </div>
+      <div class="overlay-bar">
+        <div class="segmented" role="group" aria-label="MRI overlay">
+          <button type="button" data-mode="reference" aria-pressed="true">Reference</button>
+          <button type="button" data-mode="prediction" aria-pressed="false">Prediction</button>
+          <button type="button" data-mode="difference" aria-pressed="false">Differences</button>
+          <button type="button" data-mode="additions" aria-pressed="false">Added oedema only</button>
+          <button type="button" data-mode="off" aria-pressed="false">MRI only</button>
+        </div>
+        <label class="opacity" for="opacity">Overlay opacity <input id="opacity" type="range" min="0" max="100" value="58"><output id="opacity-value">58%</output></label>
+      </div>
+      <div id="difference-legend" class="difference-legend" hidden>
+        <span><i class="swatch agree"></i>Same label</span>
+        <span><i class="swatch reference-only"></i>Reference only</span>
+        <span><i class="swatch prediction-only"></i>Prediction only</span>
+        <span><i class="swatch mismatch"></i>Different label</span>
+      </div>
+      <div class="slice-grid" id="slice-grid"></div>
+      <div class="panel-foot">
+        <span id="position" class="mono">Voxel position —</span>
+        <span id="spacing" class="muted"></span>
+      </div>
+    </section>
+
+    <details class="notes">
+      <summary>About the scores and data</summary>
+      <p>Dice measures overlap between the predicted and reference regions on a scale from 0 to 1. The whole tumour includes all three labels. The core combines enhancing and non-enhancing tumour.</p>
+      <p id="model-info"></p><p>Boundary recovery is a frozen experimental add-on. Mint highlights additions, not confirmed oedema. Use Differences to compare the selected prediction with the annotation. These are the 51 held-out content-group representatives from the retrained experiment.</p>
+      <p>The viewer uses the saved masks on the same voxel grid. MRI brightness is scaled for display. The 3D views show exposed voxel faces. All scores use the original label arrays.</p>
+      <p>Data: <a href="https://registry.opendata.aws/msd/">Medical Segmentation Decathlon and contributors, Task01 BrainTumour</a>. Derived visualizations are shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>; arrays are reoriented, brightness scaled, and predictions/annotations coloured. Research and teaching viewer, developed with AI assistance. See the final report for methods and limitations.</p>
+    </details>
+  </main>
+</body>
+</html>
